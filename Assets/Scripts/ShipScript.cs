@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ShipScript : MonoBehaviour
 {
@@ -9,10 +10,23 @@ public class ShipScript : MonoBehaviour
     [SerializeField] private GameObject VFX;
     [SerializeField] private GameObject Shield;
 
+    public SkillUI bombSkillUI;
+    public GameObject bombExplosionPrefab;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         StartCoroutine(DisableShield());
+
+        // Automatically find the SkillUI if it's not set
+        if (bombSkillUI == null)
+        {
+            bombSkillUI = FindObjectOfType<SkillUI>();
+            if (bombSkillUI == null)
+            {
+                Debug.LogError("ShipScript could not find a SkillUI object in the scene.");
+            }
+        }
     }
 
     // Update is called once per frame
@@ -20,6 +34,46 @@ public class ShipScript : MonoBehaviour
     {
         Move();
         Fire();
+        HandleBombSkill();
+    }
+
+    void HandleBombSkill()
+    {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            if (bombSkillUI != null && !bombSkillUI.IsOnCooldown())
+            {
+                UseBomb();
+            }
+        }
+    }
+
+    void UseBomb()
+    {
+        bombSkillUI.StartCooldown();
+
+        // Find all chicken scripts
+        ChickenScript[] chickens = FindObjectsOfType<ChickenScript>();
+        foreach (ChickenScript chicken in chickens)
+        {
+            if (bombExplosionPrefab != null)
+            {
+                Instantiate(bombExplosionPrefab, chicken.transform.position, Quaternion.identity);
+            }
+            ScoreController.Instance.GetScore(10); // Assuming 10 points per chicken
+            Destroy(chicken.gameObject);
+        }
+
+        // Find all egg game objects
+        GameObject[] eggs = GameObject.FindGameObjectsWithTag("egg");
+        foreach (GameObject egg in eggs)
+        {
+            if (bombExplosionPrefab != null)
+            {
+                Instantiate(bombExplosionPrefab, egg.transform.position, Quaternion.identity);
+            }
+            Destroy(egg);
+        }
     }
 
     void Move()
